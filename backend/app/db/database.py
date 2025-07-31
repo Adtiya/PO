@@ -34,7 +34,6 @@ sync_engine = create_engine(
 # Asynchronous engine for API operations
 async_engine = create_async_engine(
     settings.database_url_async,
-    poolclass=QueuePool,
     pool_size=settings.DATABASE_POOL_SIZE,
     max_overflow=settings.DATABASE_MAX_OVERFLOW,
     pool_timeout=settings.DATABASE_POOL_TIMEOUT,
@@ -108,6 +107,10 @@ async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
         finally:
             await session.close()
 
+
+# Alias for backward compatibility
+get_db_session = AsyncSessionLocal
+
 # ============================================================================
 # DATABASE OPERATIONS
 # ============================================================================
@@ -116,7 +119,7 @@ async def create_tables():
     """Create all database tables."""
     try:
         # Import all models to ensure they're registered
-        from app.models import *  # noqa
+        from app.models import user, auth, rbac, base
         
         async with async_engine.begin() as conn:
             # Note: In production, use Alembic migrations instead
@@ -136,7 +139,7 @@ async def drop_tables():
         raise RuntimeError("Cannot drop tables in production environment")
     
     try:
-        from app.models import *  # noqa
+        from app.models import user, auth, rbac, base
         
         async with async_engine.begin() as conn:
             await conn.run_sync(Base.metadata.drop_all)

@@ -31,7 +31,7 @@ class TemporalPermissionCreate(BaseModel):
     permission_id: str
     resource_type: Optional[str] = None
     resource_id: Optional[str] = None
-    schedule_type: str = Field(..., regex='^(fixed|recurring|cron|conditional)$')
+    schedule_type: str = Field(..., pattern='^(fixed|recurring|cron|conditional)$')
     valid_from: Optional[datetime] = None
     valid_until: Optional[datetime] = None
     cron_expression: Optional[str] = None
@@ -67,7 +67,7 @@ class TemporalPermissionCreate(BaseModel):
 
 class TemporalPermissionUpdate(BaseModel):
     """Schema for updating a temporal permission."""
-    schedule_type: Optional[str] = Field(None, regex='^(fixed|recurring|cron|conditional)$')
+    schedule_type: Optional[str] = Field(None, pattern='^(fixed|recurring|cron|conditional)$')
     valid_from: Optional[datetime] = None
     valid_until: Optional[datetime] = None
     cron_expression: Optional[str] = None

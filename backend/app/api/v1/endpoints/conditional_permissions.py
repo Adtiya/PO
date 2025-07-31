@@ -35,7 +35,7 @@ class ConditionCreate(BaseModel):
     condition_type: str = Field(..., description="Type of condition")
     condition_data: Dict[str, Any] = Field(..., description="Condition configuration data")
     is_global: bool = Field(default=False, description="Whether condition can be used globally")
-    risk_level: str = Field(default='medium', regex='^(low|medium|high|critical)$')
+    risk_level: str = Field(default='medium', pattern='^(low|medium|high|critical)$')
     
     @validator('name')
     def validate_name(cls, v):
@@ -51,7 +51,7 @@ class ConditionUpdate(BaseModel):
     description: Optional[str] = Field(None, max_length=1000)
     condition_data: Optional[Dict[str, Any]] = None
     is_global: Optional[bool] = None
-    risk_level: Optional[str] = Field(None, regex='^(low|medium|high|critical)$')
+    risk_level: Optional[str] = Field(None, pattern='^(low|medium|high|critical)$')
     is_active: Optional[bool] = None
 
 

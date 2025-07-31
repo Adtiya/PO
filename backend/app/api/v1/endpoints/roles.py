@@ -31,7 +31,7 @@ class RoleCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     display_name: str = Field(..., min_length=1, max_length=200)
     description: Optional[str] = Field(None, max_length=1000)
-    role_type: str = Field(default='functional', regex='^(system|organizational|functional|project)$')
+    role_type: str = Field(default='functional', pattern='^(system|organizational|functional|project)$')
     scope: Optional[str] = Field(None, max_length=100)
     parent_role_id: Optional[str] = None
     permissions: Optional[List[str]] = Field(default=[])
@@ -59,7 +59,7 @@ class RoleUpdate(BaseModel):
     """Schema for updating a role."""
     display_name: Optional[str] = Field(None, min_length=1, max_length=200)
     description: Optional[str] = Field(None, max_length=1000)
-    role_type: Optional[str] = Field(None, regex='^(system|organizational|functional|project)$')
+    role_type: Optional[str] = Field(None, pattern='^(system|organizational|functional|project)$')
     scope: Optional[str] = Field(None, max_length=100)
     is_active: Optional[bool] = None
     max_users: Optional[int] = Field(None, gt=0)
@@ -103,7 +103,7 @@ class RoleHierarchyCreate(BaseModel):
     """Schema for creating role hierarchy."""
     parent_role_id: str
     child_role_id: str
-    inheritance_type: str = Field(default='full', regex='^(full|partial|conditional)$')
+    inheritance_type: str = Field(default='full', pattern='^(full|partial|conditional)$')
     conditions: Optional[Dict[str, Any]] = Field(default={})
     
     @validator('parent_role_id', 'child_role_id')

@@ -33,7 +33,7 @@ class PermissionCreate(BaseModel):
     category: str = Field(..., min_length=1, max_length=50)
     resource_type: Optional[str] = Field(None, max_length=50)
     action: str = Field(..., min_length=1, max_length=50)
-    risk_level: str = Field(default='low', regex='^(low|medium|high|critical)$')
+    risk_level: str = Field(default='low', pattern='^(low|medium|high|critical)$')
     requires_approval: bool = Field(default=False)
     depends_on_permissions: Optional[List[str]] = Field(default=[])
     conflicts_with_permissions: Optional[List[str]] = Field(default=[])
@@ -53,7 +53,7 @@ class PermissionUpdate(BaseModel):
     category: Optional[str] = Field(None, min_length=1, max_length=50)
     resource_type: Optional[str] = Field(None, max_length=50)
     action: Optional[str] = Field(None, min_length=1, max_length=50)
-    risk_level: Optional[str] = Field(None, regex='^(low|medium|high|critical)$')
+    risk_level: Optional[str] = Field(None, pattern='^(low|medium|high|critical)$')
     requires_approval: Optional[bool] = None
     is_active: Optional[bool] = None
     depends_on_permissions: Optional[List[str]] = None
@@ -100,7 +100,7 @@ class UserResourcePermissionCreate(BaseModel):
     resource_type: str
     resource_id: str
     permission_id: str
-    grant_type: str = Field(default='direct', regex='^(direct|inherited|delegated|temporary)$')
+    grant_type: str = Field(default='direct', pattern='^(direct|inherited|delegated|temporary)$')
     valid_until: Optional[datetime] = None
     conditions: Optional[Dict[str, Any]] = Field(default={})
     

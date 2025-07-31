@@ -136,7 +136,7 @@ def setup_logging():
     
     if settings.LOG_FORMAT.lower() == "json":
         # JSON output for production
-        processors.append(structlog.processors.JSONRenderer(serializer=json_serializer))
+        processors.append(structlog.processors.JSONRenderer())
     else:
         # Human-readable output for development
         processors.extend([

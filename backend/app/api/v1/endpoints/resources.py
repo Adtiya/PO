@@ -35,7 +35,7 @@ class ResourceCreate(BaseModel):
     description: Optional[str] = Field(None, max_length=1000)
     owner_id: Optional[str] = None
     parent_resource_id: Optional[str] = None
-    security_level: str = Field(default='internal', regex='^(public|internal|confidential|restricted)$')
+    security_level: str = Field(default='internal', pattern='^(public|internal|confidential|restricted)$')
     attributes: Optional[Dict[str, Any]] = Field(default={})
     tags: Optional[List[str]] = Field(default=[])
     
@@ -55,7 +55,7 @@ class ResourceUpdate(BaseModel):
     display_name: Optional[str] = Field(None, max_length=200)
     description: Optional[str] = Field(None, max_length=1000)
     owner_id: Optional[str] = None
-    security_level: Optional[str] = Field(None, regex='^(public|internal|confidential|restricted)$')
+    security_level: Optional[str] = Field(None, pattern='^(public|internal|confidential|restricted)$')
     attributes: Optional[Dict[str, Any]] = None
     tags: Optional[List[str]] = None
     is_active: Optional[bool] = None
@@ -91,7 +91,7 @@ class ResourcePermissionGrant(BaseModel):
     """Schema for granting resource permission to user."""
     user_id: str
     permission_name: str
-    grant_type: str = Field(default='direct', regex='^(direct|inherited|delegated|temporary)$')
+    grant_type: str = Field(default='direct', pattern='^(direct|inherited|delegated|temporary)$')
     valid_until: Optional[datetime] = None
     conditions: Optional[Dict[str, Any]] = Field(default={})
     

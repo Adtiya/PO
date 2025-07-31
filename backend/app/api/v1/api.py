@@ -3,7 +3,7 @@ Main API router for the Enterprise AI System.
 Aggregates all API endpoints under version 1.
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 
 from app.api.v1.endpoints import (
     auth, users, roles, permissions, conversations, 
@@ -44,7 +44,10 @@ api_router.include_router(audit.router, prefix="/audit", tags=["audit"])
 @api_router.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {"status": "healthy", "version": "1.0.0"}API information endpoint
+    return {"status": "healthy", "version": "1.0.0"}
+
+
+# API information endpoint
 @api_router.get("/", tags=["API Info"])
 async def api_info(request: Request):
     """Get API information and available endpoints."""

@@ -14,7 +14,7 @@ import structlog
 
 from app.core.config import settings
 from app.core.logging import setup_logging
-from app.db.database import engine, create_tables
+from app.db.database import sync_engine, create_tables
 from app.middleware.auth import AuthMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.audit import AuditMiddleware
