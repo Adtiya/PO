@@ -1,0 +1,220 @@
+# AWS RDS PostgreSQL Configuration for Enterprise AI System
+# This configuration supports production deployment with high availability
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'RDS PostgreSQL instance for Enterprise AI System'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: production
+    AllowedValues: [development, staging, production]
+    Description: Environment name
+  
+  DBInstanceClass:
+    Type: String
+    Default: db.t3.medium
+    AllowedValues: [db.t3.micro, db.t3.small, db.t3.medium, db.t3.large]
+    Description: RDS instance class
+  
+  DBAllocatedStorage:
+    Type: Number
+    Default: 100
+    MinValue: 20
+    MaxValue: 1000
+    Description: Database allocated storage in GB
+  
+  DBName:
+    Type: String
+    Default: enterprise_ai
+    Description: Database name
+  
+  DBUsername:
+    Type: String
+    Default: enterprise_admin
+    Description: Database master username
+  
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID where RDS will be deployed
+  
+  PrivateSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Private subnet IDs for RDS deployment
+
+Resources:
+  # DB Subnet Group
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for Enterprise AI RDS
+      SubnetIds: !Ref PrivateSubnetIds
+      Tags:
+        - Key: Name
+          Value: !Sub '${Environment}-enterprise-ai-db-subnet-group'
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Security Group for RDS
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Enterprise AI RDS
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref AppSecurityGroup
+          Description: PostgreSQL access from application
+      Tags:
+        - Key: Name
+          Value: !Sub '${Environment}-enterprise-ai-db-sg'
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Security Group for Application (to be referenced by ECS/EC2)
+  AppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Enterprise AI application
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          DestinationSecurityGroupId: !Ref DBSecurityGroup
+          Description: PostgreSQL access to database
+      Tags:
+        - Key: Name
+          Value: !Sub '${Environment}-enterprise-ai-app-sg'
+        - Key: Environment
+          Value: !Ref Environment
+
+  # RDS Parameter Group
+  DBParameterGroup:
+    Type: AWS::RDS::DBParameterGroup
+    Properties:
+      Description: Parameter group for Enterprise AI PostgreSQL
+      Family: postgres15
+      Parameters:
+        shared_preload_libraries: pg_stat_statements
+        log_statement: all
+        log_min_duration_statement: 1000
+        max_connections: 200
+        work_mem: 16MB
+      Tags:
+        - Key: Name
+          Value: !Sub '${Environment}-enterprise-ai-db-params'
+        - Key: Environment
+          Value: !Ref Environment
+
+  # RDS Instance
+  DBInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    Properties:
+      DBInstanceIdentifier: !Sub '${Environment}-enterprise-ai-db'
+      DBInstanceClass: !Ref DBInstanceClass
+      Engine: postgres
+      EngineVersion: '15.4'
+      DBName: !Ref DBName
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Sub '{{resolve:secretsmanager:${DBPasswordSecret}:SecretString:password}}'
+      AllocatedStorage: !Ref DBAllocatedStorage
+      StorageType: gp3
+      StorageEncrypted: true
+      MultiAZ: !If [IsProduction, true, false]
+      BackupRetentionPeriod: !If [IsProduction, 30, 7]
+      PreferredBackupWindow: '03:00-04:00'
+      PreferredMaintenanceWindow: 'sun:04:00-sun:05:00'
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VPCSecurityGroups:
+        - !Ref DBSecurityGroup
+      DBParameterGroupName: !Ref DBParameterGroup
+      EnablePerformanceInsights: true
+      PerformanceInsightsRetentionPeriod: !If [IsProduction, 731, 7]
+      MonitoringInterval: 60
+      MonitoringRoleArn: !GetAtt RDSEnhancedMonitoringRole.Arn
+      DeletionProtection: !If [IsProduction, true, false]
+      Tags:
+        - Key: Name
+          Value: !Sub '${Environment}-enterprise-ai-db'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: enterprise-ai-system
+
+  # Secrets Manager for DB Password
+  DBPasswordSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub '${Environment}-enterprise-ai-db-password'
+      Description: Database password for Enterprise AI System
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "enterprise_admin"}'
+        GenerateStringKey: password
+        PasswordLength: 32
+        ExcludeCharacters: '"@/\'
+      Tags:
+        - Key: Name
+          Value: !Sub '${Environment}-enterprise-ai-db-password'
+        - Key: Environment
+          Value: !Ref Environment
+
+  # IAM Role for RDS Enhanced Monitoring
+  RDSEnhancedMonitoringRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: ''
+            Effect: Allow
+            Principal:
+              Service: monitoring.rds.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole'
+      Path: /
+
+Conditions:
+  IsProduction: !Equals [!Ref Environment, production]
+
+Outputs:
+  DBInstanceEndpoint:
+    Description: RDS instance endpoint
+    Value: !GetAtt DBInstance.Endpoint.Address
+    Export:
+      Name: !Sub '${Environment}-enterprise-ai-db-endpoint'
+  
+  DBInstancePort:
+    Description: RDS instance port
+    Value: !GetAtt DBInstance.Endpoint.Port
+    Export:
+      Name: !Sub '${Environment}-enterprise-ai-db-port'
+  
+  DBName:
+    Description: Database name
+    Value: !Ref DBName
+    Export:
+      Name: !Sub '${Environment}-enterprise-ai-db-name'
+  
+  DBSecurityGroupId:
+    Description: Database security group ID
+    Value: !Ref DBSecurityGroup
+    Export:
+      Name: !Sub '${Environment}-enterprise-ai-db-sg-id'
+  
+  AppSecurityGroupId:
+    Description: Application security group ID
+    Value: !Ref AppSecurityGroup
+    Export:
+      Name: !Sub '${Environment}-enterprise-ai-app-sg-id'
+  
+  DBPasswordSecretArn:
+    Description: Database password secret ARN
+    Value: !Ref DBPasswordSecret
+    Export:
+      Name: !Sub '${Environment}-enterprise-ai-db-password-secret-arn'
+

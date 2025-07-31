@@ -1,0 +1,136 @@
+# Docker Compose for AWS-compatible local testing
+# Simulates AWS environment with PostgreSQL and Redis
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database (simulates AWS RDS)
+  postgres:
+    image: postgres:15.4
+    container_name: enterprise-ai-postgres
+    environment:
+      POSTGRES_DB: enterprise_ai
+      POSTGRES_USER: enterprise_admin
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-secure_password_123}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U enterprise_admin -d enterprise_ai"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - enterprise-network
+
+  # Redis Cache (simulates AWS ElastiCache)
+  redis:
+    image: redis:7.2-alpine
+    container_name: enterprise-ai-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - enterprise-network
+
+  # Enterprise AI Backend Application
+  backend:
+    build:
+      context: ../../
+      dockerfile: aws/docker/Dockerfile
+    container_name: enterprise-ai-backend
+    environment:
+      # Database Configuration (AWS RDS compatible)
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: enterprise_ai
+      DATABASE_USER: enterprise_admin
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-secure_password_123}
+      DATABASE_URL: postgresql://enterprise_admin:${DATABASE_PASSWORD:-secure_password_123}@postgres:5432/enterprise_ai
+      
+      # Redis Configuration (AWS ElastiCache compatible)
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_URL: redis://redis:6379/0
+      
+      # Application Configuration
+      ENVIRONMENT: production
+      SECRET_KEY: ${SECRET_KEY:-your-super-secret-key-change-in-production}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-your-jwt-secret-key-change-in-production}
+      
+      # AWS-compatible settings
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+      LOG_LEVEL: INFO
+      
+      # Security settings
+      CORS_ORIGINS: "*"
+      ALLOWED_HOSTS: "*"
+      
+      # Performance settings
+      WORKERS: 2
+      MAX_CONNECTIONS: 100
+      
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - enterprise-network
+    restart: unless-stopped
+
+  # Nginx Load Balancer (simulates AWS ALB)
+  nginx:
+    image: nginx:alpine
+    container_name: enterprise-ai-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - enterprise-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  enterprise-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
