@@ -193,6 +193,6 @@ class SoftDeleteMixin:
         self.deleted_by = None
 
 
-# Update Base to use BaseModel
-Base = BaseModel
+# Update Base to use the declarative base, not BaseModel
+# Base = BaseModel  # This was wrong - BaseModel inherits from Base, not the other way around
 

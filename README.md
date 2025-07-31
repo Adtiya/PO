@@ -1,223 +1,356 @@
-# Enterprise AI System - Dynamic RBAC
+# Enterprise AI System
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-12+-blue.svg)](https://www.postgresql.org/)
-[![Redis](https://img.shields.io/badge/Redis-6+-red.svg)](https://redis.io/)
+A comprehensive, production-ready enterprise AI system with advanced RBAC (Role-Based Access Control), microservices architecture, and AWS deployment capabilities.
 
-A comprehensive, enterprise-grade Role-Based Access Control (RBAC) system built with FastAPI and PostgreSQL. This system provides advanced security features including temporal permissions, conditional access, resource-based authorization, and hierarchical role management.
+## 🏗️ System Overview
 
-## 🚀 Features
+This Enterprise AI System provides a complete foundation for building scalable AI applications with enterprise-grade security, authentication, and authorization. The system includes:
 
-### Core RBAC Capabilities
-- **Dynamic Permission Checking**: Real-time authorization with multiple permission sources
-- **Role Hierarchies**: Inheritance with cycle detection and depth limits
-- **Resource-Based Permissions**: Fine-grained access control per resource
-- **Temporal Access Control**: Time-based permissions with timezone support
-- **Conditional Access**: Context-aware policies (location, device, risk score)
+- **Advanced RBAC Framework**: Role-based access control with temporal and conditional permissions
+- **JWT Authentication**: Secure token-based authentication system
+- **Microservices Architecture**: Modular, scalable service design
+- **AWS Production Ready**: Complete infrastructure-as-code for AWS deployment
+- **PostgreSQL Database**: 15-table schema with comprehensive data models
+- **RESTful APIs**: Well-documented API endpoints with OpenAPI/Swagger
+- **Comprehensive Testing**: Full test suite for all components
 
-### Enterprise Security
-- **Multi-Factor Authentication**: TOTP, SMS, and hardware token support
-- **SSO Integration**: OAuth2, SAML, and OIDC provider support
-- **Data Protection**: Encryption, masking, and classification
-- **Compliance**: GDPR, HIPAA, SOX, PCI-DSS framework support
-- **Audit Trails**: Comprehensive logging for all security events
+## 🚀 Quick Start
 
-### Performance & Scalability
-- **Multi-Level Caching**: Redis-based performance optimization
-- **Horizontal Scaling**: Stateless design supporting load balancing
-- **Database Optimization**: Efficient queries and connection pooling
-- **Sub-millisecond Response**: Optimized for high-throughput scenarios
-
-## 📋 Requirements
+### Prerequisites
 
 - Python 3.11+
 - PostgreSQL 12+
-- Redis 6+
-- FastAPI 0.104+
-- SQLAlchemy 2.0+
+- Redis (optional, for caching)
+- Docker (for containerized deployment)
+- AWS CLI (for AWS deployment)
 
-## 🛠️ Installation
+### Local Development Setup
 
-### 1. Clone the Repository
-```bash
-git clone https://github.com/your-username/enterprise-ai-rbac.git
-cd enterprise-ai-rbac
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd enterprise_system
+   ```
+
+2. **Set up Python environment**
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -r backend/requirements.txt
+   ```
+
+3. **Configure environment variables**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your database and other configuration
+   ```
+
+4. **Set up database**
+   ```bash
+   # Create PostgreSQL database
+   createdb enterprise_ai_system
+   
+   # Run migrations
+   cd migrations
+   python run_migrations.py
+   ```
+
+5. **Start the backend server**
+   ```bash
+   cd backend
+   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+   ```
+
+6. **Access the system**
+   - API Documentation: http://localhost:8000/docs
+   - Health Check: http://localhost:8000/health
+
+## 📁 Project Structure
+
+```
+enterprise_system/
+├── backend/                    # FastAPI backend application
+│   ├── app/
+│   │   ├── api/               # API routes and endpoints
+│   │   ├── models/            # SQLAlchemy database models
+│   │   ├── services/          # Business logic services
+│   │   ├── db/                # Database configuration
+│   │   └── main.py            # FastAPI application entry point
+│   └── requirements.txt       # Python dependencies
+├── microservices/             # Microservices components
+│   ├── pi_service/           # Personal Intelligence service
+│   ├── obr_service/          # Organizational Behavior Recognition
+│   └── da_service/           # Data Analytics service
+├── aws/                      # AWS deployment configurations
+│   ├── docker/               # Docker configurations
+│   ├── ecs/                  # ECS service definitions
+│   ├── rds/                  # RDS database configurations
+│   ├── iam/                  # IAM roles and policies
+│   └── deploy.sh             # One-command deployment script
+├── migrations/               # Database migrations
+└── docs/                     # Documentation
 ```
 
-### 2. Set Up Python Environment
+## 🔐 Authentication & Authorization
+
+### RBAC System Features
+
+- **Role-Based Access Control**: Hierarchical role system with inheritance
+- **Permission Management**: Granular permissions for resources and actions
+- **Temporal Permissions**: Time-based access control
+- **Conditional Permissions**: Context-aware authorization
+- **JWT Tokens**: Secure, stateless authentication
+- **User Management**: Complete user lifecycle management
+
+### Default Roles
+
+- **Admin**: Full system access
+- **Manager**: Department-level management access
+- **Analyst**: Data analysis and reporting access
+- **User**: Basic user access
+
+### API Authentication
+
+All API endpoints require authentication via JWT tokens:
+
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r backend/requirements.txt
+# Login to get token
+curl -X POST "http://localhost:8000/api/v1/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com", "password": "password"}'
+
+# Use token in subsequent requests
+curl -X GET "http://localhost:8000/api/v1/users/" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
-### 3. Set Up Database
-```bash
-# Install PostgreSQL and create database
-createdb enterprise_ai
+## 🗄️ Database Schema
 
-# Run migrations
-cd migrations
-python run_migrations.py
+The system uses a comprehensive 15-table PostgreSQL schema:
+
+### Core Tables
+- **users**: User accounts and profiles
+- **roles**: System roles and permissions
+- **permissions**: Granular permission definitions
+- **user_roles**: User-role assignments
+- **role_permissions**: Role-permission mappings
+
+### Advanced Features
+- **temporal_permissions**: Time-based access control
+- **conditional_permissions**: Context-aware permissions
+- **audit_logs**: Comprehensive audit trail
+- **conversations**: AI conversation management
+- **documents**: Document management system
+
+## 🔧 API Endpoints
+
+### Authentication
+- `POST /api/v1/auth/register` - User registration
+- `POST /api/v1/auth/login` - User login
+- `POST /api/v1/auth/refresh` - Token refresh
+- `POST /api/v1/auth/logout` - User logout
+
+### User Management
+- `GET /api/v1/users/` - List users
+- `POST /api/v1/users/` - Create user
+- `GET /api/v1/users/{id}` - Get user details
+- `PUT /api/v1/users/{id}` - Update user
+- `DELETE /api/v1/users/{id}` - Delete user
+
+### RBAC Management
+- `GET /api/v1/roles/` - List roles
+- `POST /api/v1/roles/` - Create role
+- `GET /api/v1/permissions/` - List permissions
+- `POST /api/v1/permissions/` - Create permission
+
+### Advanced Features
+- `GET /api/v1/temporal-permissions/` - Temporal permissions
+- `GET /api/v1/conditional-permissions/` - Conditional permissions
+- `GET /api/v1/audit/` - Audit logs
+
+## 🐳 Docker Deployment
+
+### Local Docker Setup
+
+```bash
+# Build and run with Docker Compose
+docker-compose up --build
+
+# Or run individual services
+docker build -t enterprise-ai-backend ./backend
+docker run -p 8000:8000 enterprise-ai-backend
 ```
 
-### 4. Set Up Redis
+### Production Docker
+
 ```bash
-# Install and start Redis
-redis-server
+# Build production image
+docker build -f aws/docker/Dockerfile -t enterprise-ai-system .
+
+# Run with production configuration
+docker run -p 8000:8000 --env-file .env.production enterprise-ai-system
 ```
 
-### 5. Configure Environment
+## ☁️ AWS Deployment
+
+### One-Command Deployment
+
 ```bash
-cp backend/.env.example backend/.env
-# Edit .env with your database and Redis configurations
+cd aws
+./deploy.sh production us-east-1
 ```
 
-### 6. Start the Application
-```bash
-cd backend
-python run.py
-```
+### AWS Infrastructure
 
-The API will be available at `http://localhost:8000`
+The system deploys to AWS with:
 
-## 📚 Documentation
+- **ECS Fargate**: Containerized application hosting
+- **RDS PostgreSQL**: Managed database with Multi-AZ
+- **ElastiCache Redis**: Caching and session management
+- **Application Load Balancer**: Traffic distribution
+- **CloudWatch**: Monitoring and logging
+- **Secrets Manager**: Secure credential management
+- **IAM**: Least-privilege security model
 
-- **[System Documentation](backend/docs/RBAC_SYSTEM_DOCUMENTATION.md)**: Comprehensive system guide
-- **[API Reference](backend/docs/API_REFERENCE.md)**: Detailed endpoint documentation
-- **[Database Schema](database_schema_design.md)**: Complete schema design
-- **[Migration Guide](migrations/README.md)**: Database setup and migrations
+### Estimated AWS Costs
+
+- **Development**: ~$50/month
+- **Production**: ~$160/month
+- **Enterprise**: ~$500/month (with high availability)
 
 ## 🧪 Testing
 
-### Run All Tests
+### Run Test Suite
+
 ```bash
-cd backend
-python tests/test_runner.py
+# Install test dependencies
+pip install pytest pytest-asyncio httpx
+
+# Run all tests
+pytest
+
+# Run specific test categories
+pytest tests/test_auth.py
+pytest tests/test_rbac.py
+pytest tests/test_api.py
 ```
 
-### Run Specific Test Types
+### RBAC Testing
+
 ```bash
-# Unit tests only
-python tests/test_runner.py --tests unit
+# Run comprehensive RBAC test suite
+python rbac_testing_suite.py
 
-# Performance benchmarks
-python tests/test_runner.py --tests performance
-
-# Security tests
-python tests/test_runner.py --tests security
+# Test specific RBAC features
+python test_temporal_permissions.py
+python test_conditional_permissions.py
 ```
 
-### Test Coverage
-```bash
-pytest --cov=app --cov-report=html
-```
+## 📊 Monitoring & Observability
 
-## 🏗️ Architecture
+### Health Checks
 
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   FastAPI App   │    │   RBAC Service  │    │ PostgreSQL DB   │
-│                 │◄──►│                 │◄──►│                 │
-│ • Authentication│    │ • Permissions   │    │ • Users/Roles   │
-│ • Authorization │    │ • Role Mgmt     │    │ • Permissions   │
-│ • API Endpoints │    │ • Temporal      │    │ • Resources     │
-└─────────────────┘    │ • Conditional   │    │ • Audit Logs    │
-         │              └─────────────────┘    └─────────────────┘
-         │                       │
-         │              ┌─────────────────┐
-         └─────────────►│   Redis Cache   │
-                        │                 │
-                        │ • Permissions   │
-                        │ • Sessions      │
-                        │ • Rate Limits   │
-                        └─────────────────┘
-```
+- **Application Health**: `GET /health`
+- **Database Health**: `GET /health/db`
+- **Dependencies**: `GET /health/dependencies`
 
-## 🔧 Configuration
+### Logging
 
-### Environment Variables
-```bash
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5432/enterprise_ai
-DATABASE_POOL_SIZE=20
+The system provides comprehensive logging:
 
-# Redis
-REDIS_URL=redis://localhost:6379/0
-REDIS_POOL_SIZE=10
+- **Application Logs**: Structured JSON logging
+- **Audit Logs**: Complete audit trail in database
+- **Security Logs**: Authentication and authorization events
+- **Performance Logs**: Request timing and metrics
 
-# JWT
-JWT_SECRET_KEY=your-super-secret-jwt-key
-JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
+### Metrics
 
-# RBAC
-RBAC_CACHE_TTL=300
-RBAC_MAX_ROLE_HIERARCHY_DEPTH=10
-```
+Key metrics tracked:
 
-### Production Deployment
-```bash
-# Using Docker
-docker-compose up -d
+- Request latency and throughput
+- Authentication success/failure rates
+- Permission check performance
+- Database query performance
+- Error rates and types
 
-# Using Kubernetes
-kubectl apply -f k8s/
-```
+## 🔒 Security Features
 
-## 📊 Performance
+### Security Measures
 
-### Benchmarks
-- **Permission Checks**: <2ms average response time
-- **Cache Hit Rate**: >95% for frequent operations
-- **Throughput**: 10,000+ requests/second with caching
-- **Concurrent Users**: Supports 10,000+ concurrent users
+- **JWT Authentication**: Secure token-based auth
+- **Password Hashing**: bcrypt with salt
+- **SQL Injection Protection**: SQLAlchemy ORM
+- **CORS Configuration**: Proper cross-origin handling
+- **Rate Limiting**: API rate limiting (configurable)
+- **Input Validation**: Pydantic model validation
+- **Audit Logging**: Comprehensive audit trail
 
-### Monitoring
-- Prometheus metrics endpoint: `/metrics`
-- Health check endpoint: `/health`
-- Detailed health: `/health/detailed`
+### Security Best Practices
 
-## 🔐 Security
+- Environment-based configuration
+- Secrets management via AWS Secrets Manager
+- Least-privilege IAM roles
+- Network security groups
+- Encrypted data at rest and in transit
+- Regular security updates
 
-### Authentication
-- JWT tokens with configurable expiration
-- Multi-factor authentication support
-- Account lockout protection
-- Session management
+## 🚀 Production Considerations
 
-### Authorization
-- Role-based access control
-- Resource-specific permissions
-- Temporal and conditional access
-- Audit logging for all actions
+### Scalability
 
-### Data Protection
-- Encryption at rest and in transit
-- PII data masking in logs
-- Secure password hashing (bcrypt)
-- Input validation and sanitization
+- **Horizontal Scaling**: ECS auto-scaling based on metrics
+- **Database Scaling**: RDS read replicas for read-heavy workloads
+- **Caching**: Redis for session and data caching
+- **Load Balancing**: Application Load Balancer with health checks
+
+### High Availability
+
+- **Multi-AZ Deployment**: Database and application redundancy
+- **Auto-Recovery**: ECS service auto-recovery
+- **Backup Strategy**: Automated RDS backups
+- **Disaster Recovery**: Cross-region backup options
+
+### Performance Optimization
+
+- **Database Indexing**: Optimized database indexes
+- **Connection Pooling**: Efficient database connections
+- **Async Operations**: FastAPI async/await patterns
+- **Caching Strategy**: Multi-level caching implementation
+
+## 📚 Documentation
+
+### API Documentation
+
+- **Interactive Docs**: Available at `/docs` (Swagger UI)
+- **OpenAPI Spec**: Available at `/openapi.json`
+- **Redoc**: Available at `/redoc`
+
+### Additional Documentation
+
+- [Database Schema Design](docs/database_schema.md)
+- [RBAC Implementation Guide](docs/rbac_guide.md)
+- [AWS Deployment Guide](docs/aws_deployment.md)
+- [API Reference](docs/api_reference.md)
+- [Security Guide](docs/security.md)
 
 ## 🤝 Contributing
 
+### Development Workflow
+
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Run the test suite
+6. Submit a pull request
 
-### Development Setup
-```bash
-# Install development dependencies
-pip install -r backend/requirements-dev.txt
+### Code Standards
 
-# Run pre-commit hooks
-pre-commit install
-
-# Run tests before committing
-python tests/test_runner.py
-```
+- **Python**: Follow PEP 8 style guide
+- **Type Hints**: Use type hints for all functions
+- **Documentation**: Document all public APIs
+- **Testing**: Maintain >90% test coverage
+- **Security**: Follow security best practices
 
 ## 📄 License
 
@@ -225,17 +358,40 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🆘 Support
 
-- **Documentation**: Check the [docs](backend/docs/) directory
-- **Issues**: Report bugs via GitHub Issues
+### Getting Help
+
+- **Documentation**: Check the docs/ directory
+- **Issues**: Create a GitHub issue
 - **Discussions**: Use GitHub Discussions for questions
 
-## 🙏 Acknowledgments
+### Common Issues
 
-- Built with [FastAPI](https://fastapi.tiangolo.com/)
-- Database management with [SQLAlchemy](https://www.sqlalchemy.org/)
-- Caching with [Redis](https://redis.io/)
-- Testing with [pytest](https://pytest.org/)
+1. **Database Connection**: Ensure PostgreSQL is running and accessible
+2. **Authentication Errors**: Check JWT token expiration and format
+3. **Permission Denied**: Verify user roles and permissions
+4. **AWS Deployment**: Check IAM permissions and resource limits
+
+## 🎯 Roadmap
+
+### Upcoming Features
+
+- [ ] GraphQL API support
+- [ ] Real-time notifications via WebSocket
+- [ ] Advanced analytics dashboard
+- [ ] Machine learning model integration
+- [ ] Multi-tenant support
+- [ ] API versioning strategy
+- [ ] Enhanced audit capabilities
+- [ ] Performance optimization tools
+
+### Version History
+
+- **v1.0.0**: Initial release with core RBAC functionality
+- **v1.1.0**: AWS deployment and microservices
+- **v1.2.0**: Advanced permissions and audit logging
+- **v2.0.0**: (Planned) GraphQL and real-time features
 
 ---
 
-**Developed by Manus AI** - Enterprise-grade AI system components
+**Built with ❤️ for Enterprise AI Applications**
+

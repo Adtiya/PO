@@ -6,6 +6,8 @@ Handles login, registration, token refresh, and password management.
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.security import HTTPBearer
 from pydantic import BaseModel, EmailStr
+from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 import structlog
 
@@ -13,6 +15,7 @@ from app.core.exceptions import AuthenticationException, ValidationException
 from app.middleware.auth import get_current_user, get_current_user_id
 from app.services.auth import AuthService
 from app.services.user import UserService
+from app.db.database import get_sync_db, get_async_db
 
 logger = structlog.get_logger(__name__)
 security = HTTPBearer()
@@ -77,8 +80,7 @@ class VerifyEmailRequest(BaseModel):
 async def login(
     request: LoginRequest,
     http_request: Request,
-    auth_service: AuthService = Depends(),
-    user_service: UserService = Depends()
+    db: AsyncSession = Depends(get_async_db)
 ):
     """Authenticate user and return access tokens."""
     try:
@@ -86,8 +88,12 @@ async def login(
         client_ip = http_request.client.host if http_request.client else "unknown"
         user_agent = http_request.headers.get("user-agent", "unknown")
         
+        # Create service instances
+        auth_service = AuthService(db)
+        user_service = UserService(db)
+        
         # Authenticate user
-        auth_result = await auth_service.authenticate_user(
+        auth_result = await AuthService(db).authenticate_user(
             email=request.email,
             password=request.password,
             ip_address=client_ip,
@@ -98,23 +104,21 @@ async def login(
         if not auth_result:
             raise AuthenticationException("Invalid email or password")
         
-        # Get user information
-        user = await user_service.get_user_by_id(auth_result["user_id"])
-        if not user:
-            raise AuthenticationException("User not found")
+        # Get user information from auth_result
+        user_data = auth_result["user"]
         
         return LoginResponse(
             access_token=auth_result["access_token"],
             refresh_token=auth_result["refresh_token"],
             expires_in=auth_result["expires_in"],
             user={
-                "id": str(user.id),
-                "email": user.email,
-                "username": user.username,
-                "first_name": user.first_name,
-                "last_name": user.last_name,
-                "is_active": user.is_active,
-                "is_verified": user.is_verified
+                "id": user_data["id"],
+                "email": user_data["email"],
+                "username": user_data["username"],
+                "first_name": user_data["first_name"],
+                "last_name": user_data["last_name"],
+                "is_active": True,  # User is active if authentication succeeded
+                "is_verified": user_data["is_verified"]
             }
         )
         
@@ -128,11 +132,14 @@ async def login(
 async def register(
     request: RegisterRequest,
     http_request: Request,
-    auth_service: AuthService = Depends(),
-    user_service: UserService = Depends()
+    db: Session = Depends(get_sync_db)
 ):
     """Register new user account."""
     try:
+        # Create service instances
+        auth_service = AuthService(db)
+        user_service = UserService(db)
+        
         # Get client information
         client_ip = http_request.client.host if http_request.client else "unknown"
         user_agent = http_request.headers.get("user-agent", "unknown")
@@ -163,11 +170,11 @@ async def register(
 @router.post("/refresh", response_model=RefreshTokenResponse)
 async def refresh_token(
     request: RefreshTokenRequest,
-    auth_service: AuthService = Depends()
+    db: Session = Depends(get_sync_db)
 ):
     """Refresh access token using refresh token."""
     try:
-        result = await auth_service.refresh_access_token(request.refresh_token)
+        result = await AuthService(db).refresh_access_token(request.refresh_token)
         
         return RefreshTokenResponse(
             access_token=result["access_token"],
@@ -183,11 +190,11 @@ async def refresh_token(
 @router.post("/logout")
 async def logout(
     current_user_id: str = Depends(get_current_user_id),
-    auth_service: AuthService = Depends()
+    db: Session = Depends(get_sync_db)
 ):
     """Logout user and invalidate tokens."""
     try:
-        await auth_service.logout_user(current_user_id)
+        await AuthService(db).logout_user(current_user_id)
         
         return {"message": "Logged out successfully"}
         
@@ -203,11 +210,11 @@ async def logout(
 async def change_password(
     request: ChangePasswordRequest,
     current_user_id: str = Depends(get_current_user_id),
-    auth_service: AuthService = Depends()
+    db: Session = Depends(get_sync_db)
 ):
     """Change user password."""
     try:
-        await auth_service.change_password(
+        await AuthService(db).change_password(
             user_id=current_user_id,
             current_password=request.current_password,
             new_password=request.new_password
@@ -227,13 +234,13 @@ async def change_password(
 async def forgot_password(
     request: ForgotPasswordRequest,
     http_request: Request,
-    auth_service: AuthService = Depends()
+    db: Session = Depends(get_sync_db)
 ):
     """Request password reset."""
     try:
         client_ip = http_request.client.host if http_request.client else "unknown"
         
-        await auth_service.request_password_reset(
+        await AuthService(db).request_password_reset(
             email=request.email,
             ip_address=client_ip
         )
@@ -249,13 +256,13 @@ async def forgot_password(
 async def reset_password(
     request: ResetPasswordRequest,
     http_request: Request,
-    auth_service: AuthService = Depends()
+    db: Session = Depends(get_sync_db)
 ):
     """Reset password using reset token."""
     try:
         client_ip = http_request.client.host if http_request.client else "unknown"
         
-        await auth_service.reset_password(
+        await AuthService(db).reset_password(
             token=request.token,
             new_password=request.new_password,
             ip_address=client_ip
@@ -278,11 +285,11 @@ async def reset_password(
 @router.post("/verify-email")
 async def verify_email(
     request: VerifyEmailRequest,
-    auth_service: AuthService = Depends()
+    db: Session = Depends(get_sync_db)
 ):
     """Verify email address using verification token."""
     try:
-        await auth_service.verify_email(request.token)
+        await AuthService(db).verify_email(request.token)
         
         return {"message": "Email verified successfully"}
         
@@ -295,11 +302,11 @@ async def verify_email(
 @router.post("/resend-verification")
 async def resend_verification(
     current_user_id: str = Depends(get_current_user_id),
-    auth_service: AuthService = Depends()
+    db: Session = Depends(get_sync_db)
 ):
     """Resend email verification."""
     try:
-        await auth_service.resend_verification_email(current_user_id)
+        await AuthService(db).resend_verification_email(current_user_id)
         
         return {"message": "Verification email sent"}
         
@@ -314,12 +321,12 @@ async def resend_verification(
 @router.get("/me")
 async def get_current_user_info(
     current_user = Depends(get_current_user),
-    user_service: UserService = Depends()
+    db: Session = Depends(get_sync_db)
 ):
     """Get current user information."""
     try:
         # Get detailed user information with roles and permissions
-        user_details = await user_service.get_user_with_permissions(current_user.id)
+        user_details = await UserService(db).get_user_with_permissions(current_user.id)
         
         return {
             "id": str(current_user.id),

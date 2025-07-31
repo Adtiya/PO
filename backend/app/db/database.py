@@ -67,11 +67,11 @@ AsyncSessionLocal = async_sessionmaker(
 # BASE MODEL
 # ============================================================================
 
-# SQLAlchemy declarative base
-Base = declarative_base()
+# Import Base from models.base
+from app.models.base import Base
 
 # Metadata for table creation
-metadata = MetaData()
+metadata = Base.metadata
 
 # ============================================================================
 # SESSION DEPENDENCIES
@@ -122,12 +122,9 @@ async def create_tables():
         from app.models import user, auth, rbac, base
         
         async with async_engine.begin() as conn:
-            # Note: In production, use Alembic migrations instead
-            if settings.is_development:
-                await conn.run_sync(Base.metadata.create_all)
-                logger.info("Database tables created successfully")
-            else:
-                logger.info("Skipping table creation in production (use migrations)")
+            # Force table creation in development
+            await conn.run_sync(Base.metadata.create_all)
+            logger.info("Database tables created successfully")
                 
     except Exception as e:
         logger.error("Failed to create database tables", error=str(e))
@@ -152,8 +149,9 @@ async def drop_tables():
 async def check_database_connection() -> bool:
     """Check if database connection is working."""
     try:
+        from sqlalchemy import text
         async with async_engine.begin() as conn:
-            await conn.execute("SELECT 1")
+            await conn.execute(text("SELECT 1"))
         return True
     except Exception as e:
         logger.error("Database connection check failed", error=str(e))
@@ -162,8 +160,9 @@ async def check_database_connection() -> bool:
 def check_sync_database_connection() -> bool:
     """Check if synchronous database connection is working."""
     try:
+        from sqlalchemy import text
         with sync_engine.begin() as conn:
-            conn.execute("SELECT 1")
+            conn.execute(text("SELECT 1"))
         return True
     except Exception as e:
         logger.error("Sync database connection check failed", error=str(e))
@@ -319,4 +318,21 @@ __all__ = [
     "database_health_check",
     "get_pool_status"
 ]
+
+
+# Add compatibility function for get_db
+def get_db() -> Generator:
+    """
+    Compatibility function for synchronous database sessions.
+    Returns a generator that yields database sessions.
+    """
+    db = SyncSessionLocal()
+    try:
+        yield db
+    except Exception as e:
+        logger.error("Database session error", error=str(e))
+        db.rollback()
+        raise
+    finally:
+        db.close()
 

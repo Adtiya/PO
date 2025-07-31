@@ -155,11 +155,10 @@ async def get_temporal_permission_service() -> TemporalPermissionService:
     return TemporalPermissionService()
 
 
-async def get_current_user_id_dep() -> str:
+async def get_current_user_id_dep(request: Request) -> str:
     """Get current user ID dependency."""
-    # This would be implemented based on your auth system
-    # For now, return a placeholder
-    return "placeholder-user-id"
+    # Use the proper auth system
+    return get_current_user_id(request)
 
 
 # ============================================================================
@@ -167,11 +166,11 @@ async def get_current_user_id_dep() -> str:
 # ============================================================================
 
 @router.post("/", response_model=Dict[str, str])
-@require_permission("temporal_permissions.create")
 async def create_temporal_permission(
     permission_data: TemporalPermissionCreate,
-    current_user_id: str = Depends(get_current_user_id_dep),
-    temporal_service: TemporalPermissionService = Depends(get_temporal_permission_service)
+    temporal_service: TemporalPermissionService = Depends(get_temporal_permission_service),
+    current_user_id: str = Depends(get_current_user_id),
+    _: None = RequirePermission("temporal_permissions.create")
 ):
     """Create a new temporal permission."""
     try:

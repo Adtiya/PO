@@ -636,3 +636,248 @@ class RoleHierarchy(BaseModel):
         CheckConstraint('depth > 0', name='check_positive_depth'),
     )
 
+
+
+class UserSession(BaseModel):
+    """User session tracking for authentication."""
+    
+    __tablename__ = "user_sessions"
+    
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+    
+    session_token = Column(
+        String(255),
+        unique=True,
+        nullable=False,
+        index=True
+    )
+    
+    # Session metadata
+    ip_address = Column(
+        String(45),  # IPv6 support
+        nullable=True,
+        index=True
+    )
+    
+    user_agent = Column(
+        Text,
+        nullable=True
+    )
+    
+    # Session timing
+    created_at = Column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False,
+        index=True
+    )
+    
+    last_activity_at = Column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False,
+        index=True
+    )
+    
+    expires_at = Column(
+        DateTime,
+        nullable=False,
+        index=True
+    )
+    
+    # Session status
+    is_active = Column(
+        Boolean,
+        default=True,
+        nullable=False,
+        index=True
+    )
+    
+    # Device information
+    device_info = Column(
+        JSONB,
+        nullable=True,
+        default={},
+        comment="Device and browser information"
+    )
+    
+    # Relationships
+    user = relationship(
+        "User",
+        back_populates="user_sessions"
+    )
+    
+    # Constraints
+    __table_args__ = (
+        Index('idx_user_sessions_user_active', 'user_id', 'is_active'),
+        Index('idx_user_sessions_expires', 'expires_at'),
+        Index('idx_user_sessions_activity', 'last_activity_at'),
+        CheckConstraint('expires_at > created_at', name='check_session_expiry'),
+    )
+    
+    @hybrid_property
+    def is_expired(self) -> bool:
+        """Check if session is expired."""
+        return datetime.utcnow() > self.expires_at
+    
+    def update_activity(self):
+        """Update last activity timestamp."""
+        self.last_activity_at = datetime.utcnow()
+
+
+class PasswordResetToken(BaseModel):
+    """Password reset token for secure password recovery."""
+    
+    __tablename__ = "password_reset_tokens"
+    
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+    
+    token = Column(
+        String(255),
+        unique=True,
+        nullable=False,
+        index=True
+    )
+    
+    # Token timing
+    created_at = Column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False,
+        index=True
+    )
+    
+    expires_at = Column(
+        DateTime,
+        nullable=False,
+        index=True
+    )
+    
+    # Token status
+    is_used = Column(
+        Boolean,
+        default=False,
+        nullable=False,
+        index=True
+    )
+    
+    used_at = Column(
+        DateTime,
+        nullable=True
+    )
+    
+    # Security metadata
+    ip_address = Column(
+        String(45),
+        nullable=True,
+        index=True
+    )
+    
+    used_ip_address = Column(
+        String(45),
+        nullable=True
+    )
+    
+    # Relationships
+    user = relationship(
+        "User",
+        back_populates="password_reset_tokens"
+    )
+    
+    # Constraints
+    __table_args__ = (
+        Index('idx_password_reset_user', 'user_id', 'is_used'),
+        Index('idx_password_reset_expires', 'expires_at'),
+        CheckConstraint('expires_at > created_at', name='check_token_expiry'),
+    )
+    
+    @hybrid_property
+    def is_expired(self) -> bool:
+        """Check if token is expired."""
+        return datetime.utcnow() > self.expires_at
+    
+    @hybrid_property
+    def is_valid(self) -> bool:
+        """Check if token is valid for use."""
+        return not self.is_used and not self.is_expired
+
+
+class EmailVerificationToken(BaseModel):
+    """Email verification token for account activation."""
+    
+    __tablename__ = "email_verification_tokens"
+    
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+    
+    token = Column(
+        String(255),
+        unique=True,
+        nullable=False,
+        index=True
+    )
+    
+    # Token timing
+    created_at = Column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False,
+        index=True
+    )
+    
+    expires_at = Column(
+        DateTime,
+        nullable=False,
+        index=True
+    )
+    
+    # Token status
+    is_used = Column(
+        Boolean,
+        default=False,
+        nullable=False,
+        index=True
+    )
+    
+    used_at = Column(
+        DateTime,
+        nullable=True
+    )
+    
+    # Relationships
+    user = relationship(
+        "User",
+        back_populates="email_verification_tokens"
+    )
+    
+    # Constraints
+    __table_args__ = (
+        Index('idx_email_verification_user', 'user_id', 'is_used'),
+        Index('idx_email_verification_expires', 'expires_at'),
+        CheckConstraint('expires_at > created_at', name='check_token_expiry'),
+    )
+    
+    @hybrid_property
+    def is_expired(self) -> bool:
+        """Check if token is expired."""
+        return datetime.utcnow() > self.expires_at
+    
+    @hybrid_property
+    def is_valid(self) -> bool:
+        """Check if token is valid for use."""
+        return not self.is_used and not self.is_expired
+

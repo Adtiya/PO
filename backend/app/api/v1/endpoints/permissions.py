@@ -244,25 +244,25 @@ async def list_permissions(
     try:
         from app.db.database import get_db_session
         from app.models import Permission
-        from sqlalchemy import and_, or_
+        from sqlalchemy import and_, or_, select
         
         async with get_db_session() as session:
-            query = session.query(Permission).filter(Permission.is_deleted == False)
+            query = select(Permission).where(Permission.is_deleted == False)
             
             # Apply filters
             if category:
-                query = query.filter(Permission.category == category)
+                query = query.where(Permission.category == category)
             if resource_type:
-                query = query.filter(Permission.resource_type == resource_type)
+                query = query.where(Permission.resource_type == resource_type)
             if action:
-                query = query.filter(Permission.action == action)
+                query = query.where(Permission.action == action)
             if risk_level:
-                query = query.filter(Permission.risk_level == risk_level)
+                query = query.where(Permission.risk_level == risk_level)
             if is_active is not None:
-                query = query.filter(Permission.is_active == is_active)
+                query = query.where(Permission.is_active == is_active)
             if search:
                 search_term = f"%{search}%"
-                query = query.filter(
+                query = query.where(
                     or_(
                         Permission.name.ilike(search_term),
                         Permission.display_name.ilike(search_term),
@@ -271,7 +271,9 @@ async def list_permissions(
                 )
             
             # Apply pagination
-            permissions = query.offset(skip).limit(limit).all()
+            query = query.offset(skip).limit(limit)
+            permissions_result = await session.execute(query)
+            permissions = permissions_result.scalars().all()
             
             return [
                 PermissionResponse(

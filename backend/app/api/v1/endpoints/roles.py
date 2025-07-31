@@ -232,21 +232,21 @@ async def list_roles(
     try:
         from app.db.database import get_db_session
         from app.models import Role
-        from sqlalchemy import and_, or_
+        from sqlalchemy import and_, or_, select
         
         async with get_db_session() as session:
-            query = session.query(Role).filter(Role.is_deleted == False)
+            query = select(Role).where(Role.is_deleted == False)
             
             # Apply filters
             if role_type:
-                query = query.filter(Role.role_type == role_type)
+                query = query.where(Role.role_type == role_type)
             if scope:
-                query = query.filter(Role.scope == scope)
+                query = query.where(Role.scope == scope)
             if is_active is not None:
-                query = query.filter(Role.is_active == is_active)
+                query = query.where(Role.is_active == is_active)
             if search:
                 search_term = f"%{search}%"
-                query = query.filter(
+                query = query.where(
                     or_(
                         Role.name.ilike(search_term),
                         Role.display_name.ilike(search_term),
@@ -255,7 +255,9 @@ async def list_roles(
                 )
             
             # Apply pagination
-            roles = query.offset(skip).limit(limit).all()
+            query = query.offset(skip).limit(limit)
+            roles_result = await session.execute(query)
+            roles = roles_result.scalars().all()
             
             return [
                 RoleResponse(

@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any, Set, Tuple
 import structlog
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_, or_, not_
+from sqlalchemy import and_, or_, not_, select
 
 from app.db.database import get_db_session
 from app.models import (
@@ -92,7 +92,7 @@ class RBACService:
     
     async def _check_permission_db(
         self,
-        session: Session,
+        session,  # This is AsyncSession, not Session
         user_id: str,
         permission_name: str,
         resource_type: Optional[str] = None,
@@ -100,15 +100,19 @@ class RBACService:
         context: Optional[Dict[str, Any]] = None
     ) -> bool:
         """Check permission against database."""
+        from sqlalchemy import select
         user_uuid = uuid.UUID(user_id)
         context = context or {}
         
         # Get user
-        user = session.query(User).filter(
-            User.id == user_uuid,
-            User.is_active == True,
-            User.is_deleted == False
-        ).first()
+        user_result = await session.execute(
+            select(User).where(
+                User.id == user_uuid,
+                User.is_active == True,
+                User.is_deleted == False
+            )
+        )
+        user = user_result.scalar_one_or_none()
         
         if not user:
             return False
@@ -118,11 +122,14 @@ class RBACService:
             return True
         
         # Get permission
-        permission = session.query(Permission).filter(
-            Permission.name == permission_name,
-            Permission.is_active == True,
-            Permission.is_deleted == False
-        ).first()
+        permission_result = await session.execute(
+            select(Permission).where(
+                Permission.name == permission_name,
+                Permission.is_active == True,
+                Permission.is_deleted == False
+            )
+        )
+        permission = permission_result.scalar_one_or_none()
         
         if not permission:
             return False
@@ -153,24 +160,36 @@ class RBACService:
     ) -> bool:
         """Check direct user-resource permissions."""
         # Get resource
-        resource = session.query(Resource).filter(
+        resource_result = await session.execute(
+
+            select(Resource).where(
             Resource.resource_type == resource_type,
             Resource.resource_id == resource_id,
             Resource.is_active == True,
             Resource.is_deleted == False
-        ).first()
+        )
+
+        )
+
+        resource = resource_result.scalar_one_or_none()
         
         if not resource:
             return False
         
         # Check direct permission
-        user_permission = session.query(UserResourcePermission).filter(
+        user_permission_result = await session.execute(
+
+            select(UserResourcePermission).where(
             UserResourcePermission.user_id == user_id,
             UserResourcePermission.resource_id == resource.id,
             UserResourcePermission.permission_id == permission_id,
             UserResourcePermission.is_active == True,
             UserResourcePermission.is_deleted == False
-        ).first()
+        )
+
+        )
+
+        user_permission = user_permission_result.scalar_one_or_none()
         
         if user_permission and user_permission.is_valid:
             # Check conditions
@@ -196,30 +215,51 @@ class RBACService:
         if not resource.parent_resource_id:
             return False
         
-        parent_resource = session.query(Resource).get(resource.parent_resource_id)
+        parent_resource_result = await session.execute(
+
+        
+            select(Resource).where(Resource.id == resource.parent_resource_id)
+
+        
+        )
+
+        
+        parent_resource = parent_resource_result.scalar_one_or_none()
         if not parent_resource:
             return False
         
         # Check if permission is inheritable
-        resource_permission = session.query(ResourcePermission).filter(
+        resource_permission_result = await session.execute(
+
+            select(ResourcePermission).where(
             ResourcePermission.resource_id == parent_resource.id,
             ResourcePermission.permission_id == permission_id,
             ResourcePermission.is_inheritable == True,
             ResourcePermission.is_active == True,
             ResourcePermission.is_deleted == False
-        ).first()
+        )
+
+        )
+
+        resource_permission = resource_permission_result.scalar_one_or_none()
         
         if not resource_permission:
             return False
         
         # Check user permission on parent resource
-        user_permission = session.query(UserResourcePermission).filter(
+        user_permission_result = await session.execute(
+
+            select(UserResourcePermission).where(
             UserResourcePermission.user_id == user_id,
             UserResourcePermission.resource_id == parent_resource.id,
             UserResourcePermission.permission_id == permission_id,
             UserResourcePermission.is_active == True,
             UserResourcePermission.is_deleted == False
-        ).first()
+        )
+
+        )
+
+        user_permission = user_permission_result.scalar_one_or_none()
         
         if user_permission and user_permission.is_valid:
             if await self._evaluate_permission_conditions(
@@ -234,7 +274,7 @@ class RBACService:
     
     async def _check_role_based_permission(
         self,
-        session: Session,
+        session,  # AsyncSession
         user_id: uuid.UUID,
         permission_id: uuid.UUID,
         resource_type: Optional[str],
@@ -242,14 +282,20 @@ class RBACService:
         context: Dict[str, Any]
     ) -> bool:
         """Check role-based permissions."""
+        from sqlalchemy import select
+        from sqlalchemy.orm import selectinload
+        
         # Get user's active roles
-        user_roles = session.query(UserRole).options(
-            joinedload(UserRole.role)
-        ).filter(
-            UserRole.user_id == user_id,
-            UserRole.is_active == True,
-            UserRole.is_deleted == False
-        ).all()
+        user_roles_result = await session.execute(
+            select(UserRole).options(
+                selectinload(UserRole.role)
+            ).where(
+                UserRole.user_id == user_id,
+                UserRole.is_active == True,
+                UserRole.is_deleted == False
+            )
+        )
+        user_roles = user_roles_result.scalars().all()
         
         valid_roles = [
             ur.role for ur in user_roles 
@@ -270,7 +316,7 @@ class RBACService:
     
     async def _check_role_permission(
         self,
-        session: Session,
+        session,  # AsyncSession
         role: Role,
         permission_id: uuid.UUID,
         resource_type: Optional[str],
@@ -278,13 +324,18 @@ class RBACService:
         context: Dict[str, Any]
     ) -> bool:
         """Check if role has specific permission."""
+        from sqlalchemy import select
+        
         # Check direct role permission
-        role_permission = session.query(RolePermission).filter(
-            RolePermission.role_id == role.id,
-            RolePermission.permission_id == permission_id,
-            RolePermission.is_active == True,
-            RolePermission.is_deleted == False
-        ).first()
+        role_permission_result = await session.execute(
+            select(RolePermission).where(
+                RolePermission.role_id == role.id,
+                RolePermission.permission_id == permission_id,
+                RolePermission.is_active == True,
+                RolePermission.is_deleted == False
+            )
+        )
+        role_permission = role_permission_result.scalar_one_or_none()
         
         if role_permission and role_permission.is_valid:
             # Check conditions
@@ -311,7 +362,16 @@ class RBACService:
         if not role.parent_role_id:
             return False
         
-        parent_role = session.query(Role).get(role.parent_role_id)
+        parent_role_result = await session.execute(
+
+        
+            select(Role).where(Role.id == role.parent_role_id)
+
+        
+        )
+
+        
+        parent_role = parent_role_result.scalar_one_or_none()
         if not parent_role or not parent_role.is_active or parent_role.is_deleted:
             return False
         
@@ -337,11 +397,14 @@ class RBACService:
             return False
         
         # Check custom conditions
-        conditions = session.query(PermissionCondition).filter(
-            PermissionCondition.user_resource_permission_id == user_permission.id,
-            PermissionCondition.is_active == True,
-            PermissionCondition.is_deleted == False
-        ).all()
+        conditions_result = await session.execute(
+            select(PermissionCondition).where(
+                PermissionCondition.user_resource_permission_id == user_permission.id,
+                PermissionCondition.is_active == True,
+                PermissionCondition.is_deleted == False
+            )
+        )
+        conditions = conditions_result.scalars().all()
         
         for condition in conditions:
             if not await self._evaluate_condition(condition, context):
@@ -361,14 +424,15 @@ class RBACService:
             session, role_permission_id=role_permission.id
         ):
             return False
-        
-        # Check custom conditions
-        conditions = session.query(PermissionCondition).filter(
-            PermissionCondition.role_permission_id == role_permission.id,
-            PermissionCondition.is_active == True,
-            PermissionCondition.is_deleted == False
-        ).all()
-        
+        # Get conditions for this permission
+        conditions_result = await session.execute(
+            select(PermissionCondition).where(
+                PermissionCondition.role_permission_id == role_permission.id,
+                PermissionCondition.is_active == True,
+                PermissionCondition.is_deleted == False
+            )
+        )
+        conditions = conditions_result.scalars().all()       
         for condition in conditions:
             if not await self._evaluate_condition(condition, context):
                 return False
@@ -377,28 +441,31 @@ class RBACService:
     
     async def _check_temporal_constraints(
         self,
-        session: Session,
+        session,  # AsyncSession
         user_resource_permission_id: Optional[uuid.UUID] = None,
         role_permission_id: Optional[uuid.UUID] = None
     ) -> bool:
         """Check temporal constraints for permission."""
-        query = session.query(TemporalPermission).filter(
+        from sqlalchemy import select
+        
+        query = select(TemporalPermission).where(
             TemporalPermission.is_active == True,
             TemporalPermission.is_deleted == False
         )
         
         if user_resource_permission_id:
-            query = query.filter(
+            query = query.where(
                 TemporalPermission.user_resource_permission_id == user_resource_permission_id
             )
         elif role_permission_id:
-            query = query.filter(
+            query = query.where(
                 TemporalPermission.role_permission_id == role_permission_id
             )
         else:
             return True
         
-        temporal_permissions = query.all()
+        temporal_permissions_result = await session.execute(query)
+        temporal_permissions = temporal_permissions_result.scalars().all()
         
         if not temporal_permissions:
             return True
@@ -535,11 +602,14 @@ class RBACService:
                 user_uuid = uuid.UUID(user_id)
                 
                 # Get user
-                user = session.query(User).filter(
-                    User.id == user_uuid,
-                    User.is_active == True,
-                    User.is_deleted == False
-                ).first()
+                user_result = await session.execute(
+                    select(User).where(
+                        User.id == user_uuid,
+                        User.is_active == True,
+                        User.is_deleted == False
+                    )
+                )
+                user = user_result.scalar_one_or_none()
                 
                 if not user:
                     return []
@@ -547,13 +617,19 @@ class RBACService:
                 permissions = set()
                 
                 # Get permissions from roles
-                user_roles = session.query(UserRole).options(
+                user_roles_result = await session.execute(
+
+                    select(UserRole).options(
                     joinedload(UserRole.role).joinedload(Role.role_permissions).joinedload(RolePermission.permission)
-                ).filter(
+                ).where(
                     UserRole.user_id == user_uuid,
                     UserRole.is_active == True,
                     UserRole.is_deleted == False
-                ).all()
+                )
+
+                )
+
+                user_roles = user_roles_result.scalars().all()
                 
                 for user_role in user_roles:
                     if user_role.is_valid and user_role.role.is_active:
@@ -563,22 +639,34 @@ class RBACService:
                 
                 # Get direct resource permissions
                 if resource_type and resource_id:
-                    resource = session.query(Resource).filter(
+                    resource_result = await session.execute(
+
+                        select(Resource).where(
                         Resource.resource_type == resource_type,
                         Resource.resource_id == resource_id,
                         Resource.is_active == True,
                         Resource.is_deleted == False
-                    ).first()
+                    )
+
+                    )
+
+                    resource = resource_result.scalar_one_or_none()
                     
                     if resource:
-                        user_permissions = session.query(UserResourcePermission).options(
+                        user_permissions_result = await session.execute(
+
+                            select(UserResourcePermission).options(
                             joinedload(UserResourcePermission.permission)
-                        ).filter(
+                        ).where(
                             UserResourcePermission.user_id == user_uuid,
                             UserResourcePermission.resource_id == resource.id,
                             UserResourcePermission.is_active == True,
                             UserResourcePermission.is_deleted == False
-                        ).all()
+                        )
+
+                        )
+
+                        user_permissions = user_permissions_result.scalars().all()
                         
                         for user_permission in user_permissions:
                             if user_permission.is_valid and user_permission.permission.is_active:

@@ -166,10 +166,11 @@ class User(BaseModel):
         "UserProfile",
         back_populates="user",
         uselist=False,
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+        foreign_keys="UserProfile.user_id"
     )
     
-    sessions = relationship(
+    user_sessions = relationship(
         "UserSession",
         back_populates="user",
         cascade="all, delete-orphan"
@@ -178,13 +179,29 @@ class User(BaseModel):
     user_roles = relationship(
         "UserRole",
         back_populates="user",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+        foreign_keys="UserRole.user_id"
     )
     
     user_resource_permissions = relationship(
         "UserResourcePermission",
         back_populates="user",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+        foreign_keys="UserResourcePermission.user_id"
+    )
+    
+    password_reset_tokens = relationship(
+        "PasswordResetToken",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        foreign_keys="PasswordResetToken.user_id"
+    )
+    
+    email_verification_tokens = relationship(
+        "EmailVerificationToken",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        foreign_keys="EmailVerificationToken.user_id"
     )
     
     # Indexes
@@ -369,7 +386,8 @@ class UserProfile(BaseModel):
     # Relationships
     user = relationship(
         "User",
-        back_populates="profile"
+        back_populates="profile",
+        foreign_keys=[user_id]
     )
     
     manager = relationship(
@@ -377,118 +395,4 @@ class UserProfile(BaseModel):
         foreign_keys=[manager_id],
         remote_side="User.id"
     )
-
-
-class UserSession(BaseModel):
-    """User session tracking for authentication and security."""
-    
-    __tablename__ = "user_sessions"
-    
-    user_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True
-    )
-    
-    session_token = Column(
-        String(255),
-        unique=True,
-        nullable=False,
-        index=True
-    )
-    
-    refresh_token = Column(
-        String(255),
-        unique=True,
-        nullable=True,
-        index=True
-    )
-    
-    # Session information
-    ip_address = Column(
-        INET,
-        nullable=True,
-        index=True
-    )
-    
-    user_agent = Column(
-        Text,
-        nullable=True
-    )
-    
-    device_info = Column(
-        JSONB,
-        nullable=True,
-        default={}
-    )
-    
-    # Session lifecycle
-    expires_at = Column(
-        DateTime,
-        nullable=False,
-        index=True
-    )
-    
-    last_activity_at = Column(
-        DateTime,
-        default=datetime.utcnow,
-        nullable=False,
-        index=True
-    )
-    
-    is_active = Column(
-        Boolean,
-        default=True,
-        nullable=False,
-        index=True
-    )
-    
-    # Security flags
-    is_remember_me = Column(
-        Boolean,
-        default=False,
-        nullable=False
-    )
-    
-    logout_at = Column(
-        DateTime,
-        nullable=True
-    )
-    
-    logout_reason = Column(
-        String(100),
-        nullable=True
-    )
-    
-    # Relationships
-    user = relationship(
-        "User",
-        back_populates="sessions"
-    )
-    
-    # Indexes
-    __table_args__ = (
-        Index('idx_user_sessions_user_active', 'user_id', 'is_active'),
-        Index('idx_user_sessions_expires', 'expires_at'),
-        Index('idx_user_sessions_activity', 'last_activity_at'),
-        Index('idx_user_sessions_ip', 'ip_address'),
-    )
-    
-    @hybrid_property
-    def is_expired(self) -> bool:
-        """Check if session is expired."""
-        return datetime.utcnow() > self.expires_at
-    
-    def extend_session(self, duration_hours: int = 24):
-        """Extend session expiration."""
-        from datetime import timedelta
-        self.expires_at = datetime.utcnow() + timedelta(hours=duration_hours)
-        self.last_activity_at = datetime.utcnow()
-    
-    def invalidate(self, reason: str = "logout"):
-        """Invalidate session."""
-        self.is_active = False
-        self.logout_at = datetime.utcnow()
-        self.logout_reason = reason
 

@@ -44,7 +44,7 @@ class Settings(BaseSettings):
         env="SECRET_KEY"
     )
     JWT_SECRET_KEY: str = Field(
-        default="your-jwt-secret-key-change-in-production",
+        default="enterprise-ai-jwt-secret-key-2025-production-ready",
         env="JWT_SECRET_KEY"
     )
     JWT_ALGORITHM: str = Field(default="HS256", env="JWT_ALGORITHM")
@@ -263,6 +263,7 @@ class Settings(BaseSettings):
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = True
+        extra = "ignore"  # Allow extra environment variables
 
 # Create global settings instance
 settings = Settings()
@@ -270,4 +271,9 @@ settings = Settings()
 # Ensure upload directory exists
 upload_path = Path(settings.UPLOAD_DIR)
 upload_path.mkdir(exist_ok=True)
+
+
+def get_settings() -> Settings:
+    """Get application settings instance."""
+    return settings
 

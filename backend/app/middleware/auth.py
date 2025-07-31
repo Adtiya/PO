@@ -24,8 +24,6 @@ class AuthMiddleware(BaseHTTPMiddleware):
     
     def __init__(self, app: ASGIApp):
         super().__init__(app)
-        self.auth_service = AuthService()
-        self.user_service = UserService()
         
         # Paths that don't require authentication
         self.public_paths = {
@@ -68,10 +66,16 @@ class AuthMiddleware(BaseHTTPMiddleware):
                     request.state.request_id if hasattr(request.state, 'request_id') else None
                 )
             
+            # Create database session and services
+            from app.db.database import get_sync_db
+            db = next(get_sync_db())
+            auth_service = AuthService(db)
+            user_service = UserService(db)
+            
             # Validate token and get user
             try:
-                payload = await self.auth_service.verify_access_token(token)
-                user_id = payload.get("sub")
+                payload = await auth_service.verify_access_token(token)
+                user_id = payload.get("user_id")
                 
                 if not user_id:
                     return self._create_auth_error_response(
@@ -80,7 +84,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
                     )
                 
                 # Get user information
-                user = await self.user_service.get_user_by_id(user_id)
+                user = await user_service.get_user_by_id(user_id)
                 if not user:
                     return self._create_auth_error_response(
                         "User not found",
@@ -98,8 +102,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 request.state.user_id = user_id
                 request.state.token_payload = payload
                 
-                # Update last activity
-                await self.user_service.update_last_activity(user_id)
+                # Update last activity (optional, can be removed for performance)
+                # await user_service.update_last_activity(user_id)
                 
                 logger.debug(
                     "Authentication successful",

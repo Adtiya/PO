@@ -3,8 +3,11 @@ SQLAlchemy models for the Enterprise AI System.
 """
 
 from .base import Base
-from .user import User, UserProfile, UserSession
-from .auth import Role, Permission, UserRole, RolePermission, RoleHierarchy
+from .user import User, UserProfile
+from .auth import (
+    Role, Permission, UserRole, RolePermission, RoleHierarchy,
+    UserSession, PasswordResetToken, EmailVerificationToken
+)
 from .rbac import (
     Resource, ResourcePermission, UserResourcePermission,
     PermissionCondition, TemporalPermission
@@ -15,6 +18,8 @@ __all__ = [
     "User",
     "UserProfile", 
     "UserSession",
+    "PasswordResetToken",
+    "EmailVerificationToken",
     "Role",
     "Permission",
     "UserRole",
