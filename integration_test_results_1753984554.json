@@ -1,0 +1,214 @@
+{
+  "timestamp": "2025-07-31T13:55:53.830550",
+  "tests_run": 20,
+  "tests_passed": 11,
+  "tests_failed": 9,
+  "detailed_results": [
+    {
+      "test_name": "Backend Health Check",
+      "status": "PASS",
+      "details": {
+        "status": "healthy",
+        "service": "enterprise-ai-backend",
+        "version": "1.0.0",
+        "timestamp": 1753984553.8340719
+      },
+      "error": null,
+      "timestamp": "2025-07-31T13:55:53.835741"
+    },
+    {
+      "test_name": "Frontend Accessibility",
+      "status": "PASS",
+      "details": {
+        "status_code": 200
+      },
+      "error": null,
+      "timestamp": "2025-07-31T13:55:53.840989"
+    },
+    {
+      "test_name": "API Gateway Health Check",
+      "status": "PASS",
+      "details": {
+        "service": "API Gateway",
+        "services_healthy": "5/6",
+        "status": "healthy",
+        "timestamp": "2025-07-31T17:55:53.860411",
+        "total_requests_handled": 0,
+        "uptime_seconds": 232.346482,
+        "version": "2.0.0"
+      },
+      "error": null,
+      "timestamp": "2025-07-31T13:55:53.861642"
+    },
+    {
+      "test_name": "AI NLP Health Check",
+      "status": "PASS",
+      "details": {
+        "ai_model": "GPT-3.5-turbo",
+        "capabilities": [
+          "sentiment_analysis",
+          "entity_extraction",
+          "text_summarization",
+          "text_classification",
+          "comprehensive_analysis"
+        ],
+        "service": "AI NLP Service",
+        "status": "healthy",
+        "timestamp": "2025-07-31T17:55:53.863566",
+        "version": "2.0.0"
+      },
+      "error": null,
+      "timestamp": "2025-07-31T13:55:53.864837"
+    },
+    {
+      "test_name": "AI VISION Health Check",
+      "status": "PASS",
+      "details": {
+        "ai_model": "GPT-4-Vision",
+        "capabilities": [
+          "image_analysis",
+          "object_detection",
+          "text_extraction_ocr",
+          "image_classification"
+        ],
+        "service": "AI Vision Service",
+        "status": "healthy",
+        "timestamp": "2025-07-31T17:55:53.866850",
+        "version": "2.0.0"
+      },
+      "error": null,
+      "timestamp": "2025-07-31T13:55:53.867867"
+    },
+    {
+      "test_name": "AI ANALYTICS Health Check",
+      "status": "PASS",
+      "details": {
+        "ai_model": "GPT-3.5-turbo",
+        "capabilities": [
+          "trend_analysis",
+          "predictive_modeling",
+          "anomaly_detection",
+          "ai_insights_generation",
+          "sample_data_generation"
+        ],
+        "service": "AI Analytics Service",
+        "status": "healthy",
+        "timestamp": "2025-07-31T17:55:53.869689",
+        "version": "2.0.0"
+      },
+      "error": null,
+      "timestamp": "2025-07-31T13:55:53.870616"
+    },
+    {
+      "test_name": "AI RECOMMENDATION Health Check",
+      "status": "PASS",
+      "details": {
+        "ai_model": "GPT-3.5-turbo",
+        "capabilities": [
+          "content_based_filtering",
+          "collaborative_filtering",
+          "ai_powered_recommendations",
+          "hybrid_recommendations",
+          "sample_data_generation"
+        ],
+        "service": "AI Recommendation Service",
+        "status": "healthy",
+        "timestamp": "2025-07-31T17:55:53.872448",
+        "version": "2.0.0"
+      },
+      "error": null,
+      "timestamp": "2025-07-31T13:55:53.873687"
+    },
+    {
+      "test_name": "Backend Authentication",
+      "status": "FAIL",
+      "details": null,
+      "error": "Status code: 401, Response: {\"error\":\"Authentication Error\",\"message\":\"Authentication required\",\"request_id\":\"b747ab12-98ae-4115-9507-6a69e2fd633f\"}",
+      "timestamp": "2025-07-31T13:55:53.876669"
+    },
+    {
+      "test_name": "Database Operations",
+      "status": "SKIP",
+      "details": null,
+      "error": "No auth token available",
+      "timestamp": "2025-07-31T13:55:53.876754"
+    },
+    {
+      "test_name": "AI Service nlp - Functionality",
+      "status": "FAIL",
+      "details": null,
+      "error": "Status code: 405, Response: <!doctype html>\n<html lang=en>\n<title>405 Method Not Allowed</title>\n<h1>Method Not Allowed</h1>\n<p>The method is not allowed for the requested URL.</p>\n",
+      "timestamp": "2025-07-31T13:55:53.881544"
+    },
+    {
+      "test_name": "AI Service vision - Functionality",
+      "status": "FAIL",
+      "details": null,
+      "error": "Status code: 405, Response: <!doctype html>\n<html lang=en>\n<title>405 Method Not Allowed</title>\n<h1>Method Not Allowed</h1>\n<p>The method is not allowed for the requested URL.</p>\n",
+      "timestamp": "2025-07-31T13:55:53.886825"
+    },
+    {
+      "test_name": "AI Service analytics - Functionality",
+      "status": "FAIL",
+      "details": null,
+      "error": "Status code: 405, Response: <!doctype html>\n<html lang=en>\n<title>405 Method Not Allowed</title>\n<h1>Method Not Allowed</h1>\n<p>The method is not allowed for the requested URL.</p>\n",
+      "timestamp": "2025-07-31T13:55:53.891845"
+    },
+    {
+      "test_name": "AI Service recommendation - Functionality",
+      "status": "FAIL",
+      "details": null,
+      "error": "Status code: 405, Response: <!doctype html>\n<html lang=en>\n<title>405 Method Not Allowed</title>\n<h1>Method Not Allowed</h1>\n<p>The method is not allowed for the requested URL.</p>\n",
+      "timestamp": "2025-07-31T13:55:53.897231"
+    },
+    {
+      "test_name": "API Gateway - Health",
+      "status": "PASS",
+      "details": null,
+      "error": null,
+      "timestamp": "2025-07-31T13:55:53.914968"
+    },
+    {
+      "test_name": "API Gateway - Routing",
+      "status": "FAIL",
+      "details": null,
+      "error": "Routing failed: 404",
+      "timestamp": "2025-07-31T13:55:53.917666"
+    },
+    {
+      "test_name": "AGI Core Engine - Import",
+      "status": "FAIL",
+      "details": null,
+      "error": "name 'AGICoreEngine' is not defined",
+      "timestamp": "2025-07-31T13:55:54.368638"
+    },
+    {
+      "test_name": "Consciousness Engine - Import",
+      "status": "PASS",
+      "details": null,
+      "error": null,
+      "timestamp": "2025-07-31T13:55:54.391453"
+    },
+    {
+      "test_name": "Emotion Engine - Import",
+      "status": "PASS",
+      "details": null,
+      "error": null,
+      "timestamp": "2025-07-31T13:55:54.393889"
+    },
+    {
+      "test_name": "Domain Transcendence - Import",
+      "status": "PASS",
+      "details": null,
+      "error": null,
+      "timestamp": "2025-07-31T13:55:54.494617"
+    },
+    {
+      "test_name": "End-to-End Workflow",
+      "status": "SKIP",
+      "details": null,
+      "error": "No auth token available",
+      "timestamp": "2025-07-31T13:55:54.494676"
+    }
+  ]
+}

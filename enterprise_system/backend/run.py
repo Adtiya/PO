@@ -12,9 +12,9 @@ import logging
 from datetime import datetime
 
 # Import authentication components
-from auth.auth_routes import auth_bp
-from auth.jwt_handler import SecurityHeaders
-from models.user import Base, User, Role, UserSession
+from app.api.auth import auth_bp
+from app.core.security import SecurityHeaders
+from app.models.user import Base, User, Role, UserSession
 from database import engine, SessionLocal
 
 # Configure logging
